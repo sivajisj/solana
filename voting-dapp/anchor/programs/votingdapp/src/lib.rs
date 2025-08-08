@@ -24,7 +24,94 @@ pub mod votingdapp {
         poll.candidate_amount = 0;
         Ok(())
     }
+
+    pub fn initialize_candidate(
+           ctx: Context<InitializeCandidate>,
+        candidate_name: String,
+        _poll_id: u64
+    )-> Result<()>{
+        let candidate = &mut ctx.accounts.candidate;
+        let poll = &mut ctx.accounts.poll;
+        poll.candidate_amount += 1;
+        candidate.candidate_name = candidate_name;
+        candidate.candidate_votes = 0;
+        Ok(())
+
+    }
+
+     pub fn vote(
+           ctx: Context<Vote>,
+        _candidate_name: String,
+        _poll_id: u64
+    )-> Result<()>{
+        let candidate = &mut ctx.accounts.candidate;
+        candidate.candidate_votes +=1;
+        msg!("Voted for candidates: {}", candidate.candidate_name);
+        msg!("Votes {}", candidate.candidate_votes);
+        Ok(())
+
+    }
 }
+
+#[derive(Accounts)]
+#[instruction(candidate_name: String,poll_id: u64)]
+pub struct InitializeCandidate<'info>{
+        #[account(mut)]
+    pub signer: Signer<'info>,
+        /// System Program is required for `init` accounts
+         #[account(
+            
+        seeds = [poll_id.to_le_bytes().as_ref()],
+        bump,
+    )]
+    pub poll: Account<'info, Poll>,
+
+       #[account(
+        
+        init,
+        payer = signer,
+        space = 8 + Poll::INIT_SPACE, // adjust this depending on your Poll struct size
+        seeds = [poll_id.to_le_bytes().as_ref(), candidate_name.as_bytes()],
+        bump,
+    )]
+    pub candidate: Account<'info, Candidate>,
+    pub system_program: Program<'info, System>,
+
+  
+}
+
+#[derive(Accounts)]
+#[instruction(candidate_name: String,poll_id: u64)]
+pub struct Vote<'info>{
+        #[account()]
+    pub signer: Signer<'info>,
+         #[account(
+        mut,
+        seeds = [poll_id.to_le_bytes().as_ref()],
+        bump,
+    )]
+    pub poll: Account<'info, Poll>,
+
+       #[account(
+       mut,
+        seeds = [poll_id.to_le_bytes().as_ref(), candidate_name.as_bytes()],
+        bump,
+    )]
+    pub candidate: Account<'info, Candidate>,
+
+  
+}
+
+
+#[account]
+pub struct  Candidate {
+    pub candidate_name: String,
+    pub candidate_votes: u64,
+
+}
+
+
+
 
 #[derive(Accounts)]
 #[instruction(poll_id: u64)]
